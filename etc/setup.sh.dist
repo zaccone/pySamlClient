@@ -1,0 +1,11 @@
+#!/bin/sh
+# Adjust the paths and copy the file to setup.sh
+
+REMOTECLUSTER_BIN=""
+REMOTECLUSTER_LIB=""
+if [ x$REMOTECLUSTER_BIN == "x" ] || [ x$REMOTECLUSTER_LIB == "x" ]; then
+    echo "Please edit this script and fill proper paths there"
+else
+    export PYTHONPATH=$REMOTECLUSTER_LIB:$PYTHONPATH
+    export PATH=$REMOTECLUSTER_BIN:$PATH
+fi
