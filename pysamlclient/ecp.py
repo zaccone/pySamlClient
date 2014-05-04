@@ -63,7 +63,6 @@ class ECPClient(object):
         response = http_method(url, headers=_headers,
                                verify=self.verify_ssl,
                                **kwargs)
-
         self.saml2_authn_req = {
             'text': deepcopy(response.text),
             'xml': etree.XML(response.text)
@@ -97,7 +96,6 @@ class ECPClient(object):
             headers=pysamlclient.TEXT_HTML_CONTENT_TYPE,
             data=etree.tostring(self.saml2_idp_authn_req),
             auth=(self.user, self.password), verify=self.verify_ssl)
-
 
         self.saml2_authn_response = {
             'text': deepcopy(response.text),
@@ -150,3 +148,4 @@ class ECPClient(object):
 
     def delete(self, url, headers=None):
         raise NotImplemented()
+
