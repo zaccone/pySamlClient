@@ -23,21 +23,46 @@ import pdb
 import requests
 
 import pysamlclient
+from pysamlclient import exceptions
 
 class ECPClient(object):
 
-    def __init__(self, credentials):
+    def __init__(self, credentials, verify_ssl=True):
         self.user = credentials['user']
         self.password = credentials['password']
-        self.sp_url = credentials['sp']
         self.idp_url = credentials['idp']
 
         self.session = requests.Session()
+        self.response = None
 
-    def _initial_sp_request(self):
-        response = self.session.get(self.sp_url,
-                                    headers=pysamlclient.ECP_SP_REQ_HEADERS,
-                                    verify=False)
+        self.verify_ssl = verify_ssl
+
+    def _method(self, method='GET'):
+        method = method.lower()
+
+        if method not in ['get', 'post', 'put', 'head', 'delete']:
+            raise exceptions.HTTPMethodError()
+        return getattr(self.session, method)
+
+
+    def _sp_request(self, url, method='GET', headers=None,
+                    **kwargs):
+        """Initial GET request for protected source
+
+        Indicate that client understands ECP by passing specially
+        crafted headers.
+
+        """
+        if headers is not None:
+            _headers = deepcopy(pysamlclient.ECP_SP_REQ_HEADERS)
+            _headers.update(headers)
+        else:
+            _headers = pysamlclient.ECP_SP_REQ_HEADERS
+
+        http_method = self._method(method)
+        response = http_method(url, headers=_headers,
+                               verify=self.verify_ssl,
+                               **kwargs)
 
         self.saml2_authn_req = {
             'text': deepcopy(response.text),
@@ -71,7 +96,8 @@ class ECPClient(object):
         response = self.session.post(self.idp_url,
             headers=pysamlclient.TEXT_HTML_CONTENT_TYPE,
             data=etree.tostring(self.saml2_idp_authn_req),
-            auth=(self.user, self.password), verify=False)
+            auth=(self.user, self.password), verify=self.verify_ssl)
+
 
         self.saml2_authn_response = {
             'text': deepcopy(response.text),
@@ -94,23 +120,33 @@ class ECPClient(object):
         saml2_authn_response = etree.tostring(saml2_authn_response)
 
         response = self.session.post(self.assertion_response_url,
-            headers={'Content-Type' : 'application/vnd.paos+xml'},
-            data=saml2_authn_response, verify=False)
+            headers=pysamlclient.ECP_SP_RESPONSE_HEADERS,
+            data=saml2_authn_response, verify=self.verify_ssl)
 
-        self.x_subject_token = response.headers.get('x-subject-token')
-        self.token = response.json()
+        self.response = response
 
+    def _authenticate(self):
 
+        if getattr(self, 'saml2_authn_req', None) is None:
+            raise exceptions.ECPWorkflowError()
 
-    def _re_request_token(self):
-        response = self.session.get(self.sp_url,
-                                headers=pysamlclient.ECP_SP_REQ_HEADERS,
-                                verify=False)
-
-        pdb.set_trace()
-
-    def authenticate(self):
-        self._initial_sp_request()
         self._idp_saml2_request()
         self._sp_saml2_response()
-        self._re_request_token()
+
+    def get(self, url, headers=None):
+        self._sp_request(url, method='GET',
+                         headers=headers)
+        self._authenticate()
+        return self.response
+
+    def post(self, url, data, headers=None):
+        raise NotImplemented()
+
+    def put(self, url, data, headers=None):
+        raise NotImplemented()
+
+    def head(self, url, headers=None):
+        raise NotImplemented()
+
+    def delete(self, url, headers=None):
+        raise NotImplemented()

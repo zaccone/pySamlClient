@@ -21,6 +21,10 @@ ECP_SP_REQ_HEADERS = {
              'SAML:2.0:profiles:SSO:ecp"')
 }
 
+ECP_SP_RESPONSE_HEADERS = {
+    'Content-Type' : 'application/vnd.paos+xml'
+}
+
 ECP_SAML2_NAMESPACES = {
         'ecp' : 'urn:oasis:names:tc:SAML:2.0:profiles:SSO:ecp',
         'S'   : 'http://schemas.xmlsoap.org/soap/envelope/',
